@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrightStudent 🐾</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Login Page -->
+    <div id="loginPage" class="page active">
+        <div class="login-container">
+            <div class="logo">
+                <h1>BrightStudent</h1>
+                <span class="logo-icon">🐾</span>
+            </div>
+            <form id="loginForm">
+                <input type="text" id="studentName" placeholder="Student Name" required>
+                <input type="email" id="studentEmail" placeholder="Email" required>
+                <button type="submit">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Dashboard Page -->
+    <div id="dashboardPage" class="page">
+        <nav class="navbar">
+            <div class="nav-brand">BrightStudent 🐾</div>
+            <div class="nav-user">
+                <span id="userName"></span>
+                <button onclick="logout()">Logout</button>
+            </div>
+        </nav>
+        
+        <div class="container">
+            <h2>Select Your Units (Max 6)</h2>
+            <div class="add-unit-form">
+                <input type="text" id="customUnitName" placeholder="Enter Unit Name (e.g., Advanced Mathematics, Biology)">
+                <button onclick="addCustomUnit()">+ Add New Unit</button>
+            </div>
+            <div class="units-grid" id="unitsGrid"></div>
+            <button id="confirmUnits" onclick="confirmUnits()">Confirm Selection</button>
+        </div>
+    </div>
+
+    <!-- My Units Page -->
+    <div id="myUnitsPage" class="page">
+        <nav class="navbar">
+            <div class="nav-brand">BrightStudent 🐾</div>
+            <div class="nav-user">
+                <span id="userName2"></span>
+                <button onclick="logout()">Logout</button>
+            </div>
+        </nav>
+        
+        <div class="container">
+            <h2>My Units</h2>
+            <div class="add-unit-form">
+                <input type="text" id="customUnitName2" placeholder="Enter Unit Name (e.g., Advanced Mathematics, Biology)">
+                <button onclick="addCustomUnit()">+ Add New Unit</button>
+            </div>
+            <div class="my-units-grid" id="myUnitsGrid"></div>
+        </div>
+    </div>
+
+    <!-- Unit Detail Page -->
+    <div id="unitPage" class="page">
+        <nav class="navbar">
+            <div class="nav-brand">BrightStudent 🐾</div>
+            <div class="nav-user">
+                <button onclick="backToUnits()">← Back to Units</button>
+                <button onclick="logout()">Logout</button>
+            </div>
+        </nav>
+        
+        <div class="container">
+            <h2 id="unitTitle"></h2>
+            
+            <div class="quick-actions">
+                <button class="action-btn" onclick="openNotesView()">📝 My Notes</button>
+                <button class="action-btn" onclick="openLectureNotesView()">📄 Lecture Notes</button>
+                <button class="action-btn" onclick="openRecordingsView()">🎥 Recordings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- My Notes View Page -->
+    <div id="notesViewPage" class="page">
+        <nav class="navbar">
+            <div class="nav-brand">BrightStudent 🐾</div>
+            <div class="nav-user">
+                <button onclick="backToUnitPage()">← Back</button>
+                <button onclick="logout()">Logout</button>
+            </div>
+        </nav>
+        
+        <div class="container">
+            <h2 id="notesViewTitle"></h2>
+            
+            <div class="unit-section">
+                <div class="add-topic-form">
+                    <input type="text" id="topicLabel" placeholder="Topic/Subject Label (e.g., Chapter 1, Week 3)">
+                    <input type="text" id="topicName" placeholder="Topic Name (e.g., Introduction to Calculus)">
+                    <button onclick="addTopic()">+ Add Topic</button>
+                </div>
+                <div id="topicsContainer" class="topics-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lecture Notes View Page -->
+    <div id="lectureNotesViewPage" class="page">
+        <nav class="navbar">
+            <div class="nav-brand">BrightStudent 🐾</div>
+            <div class="nav-user">
+                <button onclick="backToUnitPage()">← Back</button>
+                <button onclick="logout()">Logout</button>
+            </div>
+        </nav>
+        
+        <div class="container">
+            <h2 id="lectureNotesViewTitle"></h2>
+            
+            <div class="unit-section">
+                <input type="file" id="lectureNotesUpload" accept=".pdf,.doc,.docx,.txt,.ppt,.pptx" multiple>
+                <button onclick="uploadLectureNotes()">Upload</button>
+                <div id="lectureNotesList" class="files-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recordings View Page -->
+    <div id="recordingsViewPage" class="page">
+        <nav class="navbar">
+            <div class="nav-brand">BrightStudent 🐾</div>
+            <div class="nav-user">
+                <button onclick="backToUnitPage()">← Back</button>
+                <button onclick="logout()">Logout</button>
+            </div>
+        </nav>
+        
+        <div class="container">
+            <h2 id="recordingsViewTitle"></h2>
+            
+            <div class="unit-section">
+                <input type="file" id="fileUpload" accept="audio/*,video/*" multiple>
+                <button onclick="uploadFiles()">Upload</button>
+                <div id="filesList" class="files-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
