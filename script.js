@@ -5,25 +5,92 @@ let nextUnitId = 1;
 let currentStudent = null;
 let selectedUnits = [];
 let currentUnit = null;
+let allStudents = {};
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     loadFromStorage();
-    if (currentStudent) {
-        showPage('myUnitsPage');
-        displayMyUnits();
-    }
+    showPage('loginPage');
 });
+
+// Preview profile picture
+function previewProfilePic() {
+    const fileInput = document.getElementById('profilePicInput');
+    const file = fileInput.files[0];
+    
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            document.getElementById('loginProfilePic').src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+// Change profile picture from dashboard
+function changeDashboardProfilePic() {
+    const fileInput = document.getElementById('dashboardProfilePicInput');
+    const file = fileInput.files[0];
+    
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const newPic = e.target.result;
+            document.getElementById('dashboardProfilePic').src = newPic;
+            currentStudent.profilePic = newPic;
+            saveToStorage();
+            alert('Profile picture updated!');
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+// Change profile picture from my units
+function changeMyUnitsProfilePic() {
+    const fileInput = document.getElementById('myUnitsProfilePicInput');
+    const file = fileInput.files[0];
+    
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const newPic = e.target.result;
+            document.getElementById('myUnitsProfilePic').src = newPic;
+            document.getElementById('dashboardProfilePic').src = newPic;
+            currentStudent.profilePic = newPic;
+            saveToStorage();
+            alert('Profile picture updated!');
+        };
+        reader.readAsDataURL(file);
+    }
+}
 
 // Login
 document.getElementById('loginForm').addEventListener('submit', (e) => {
     e.preventDefault();
     const name = document.getElementById('studentName').value;
     const email = document.getElementById('studentEmail').value;
+    const profilePic = document.getElementById('loginProfilePic').src;
     
-    currentStudent = { name, email };
+    // Create or load student
+    const studentKey = email;
+    if (!allStudents[studentKey]) {
+        allStudents[studentKey] = { name, email, units: [], nextUnitId: 1, profilePic: profilePic };
+    } else {
+        // Load existing profile picture
+        if (allStudents[studentKey].profilePic) {
+            document.getElementById('loginProfilePic').src = allStudents[studentKey].profilePic;
+        }
+    }
+    
+    currentStudent = allStudents[studentKey];
+    customUnits = currentStudent.units || [];
+    nextUnitId = currentStudent.nextUnitId || 1;
+    selectedUnits = customUnits.map(u => u.id);
+    
     document.getElementById('userName').textContent = name;
     document.getElementById('userName2').textContent = name;
+    document.getElementById('dashboardProfilePic').src = currentStudent.profilePic;
+    document.getElementById('myUnitsProfilePic').src = currentStudent.profilePic;
     
     saveToStorage();
     
@@ -34,7 +101,7 @@ document.getElementById('loginForm').addEventListener('submit', (e) => {
         showPage('myUnitsPage');
         displayMyUnits();
     }
-});
+});;
 
 // Display units for selection
 function displayUnits() {
@@ -193,9 +260,9 @@ function addTopic() {
         return;
     }
     
-    const topics = JSON.parse(localStorage.getItem(`topics_${currentUnit.id}`) || '[]');
+    const topics = JSON.parse(localStorage.getItem(`topics_${currentStudent.email}_${currentUnit.id}`) || '[]');
     topics.push({ id: Date.now(), label, name, notes: [], createdDate: new Date().toLocaleString() });
-    localStorage.setItem(`topics_${currentUnit.id}`, JSON.stringify(topics));
+    localStorage.setItem(`topics_${currentStudent.email}_${currentUnit.id}`, JSON.stringify(topics));
     
     document.getElementById('topicLabel').value = '';
     document.getElementById('topicName').value = '';
@@ -205,7 +272,7 @@ function addTopic() {
 // Display topics
 function displayTopics(unitId) {
     const container = document.getElementById('topicsContainer');
-    const topics = JSON.parse(localStorage.getItem(`topics_${unitId}`) || '[]');
+    const topics = JSON.parse(localStorage.getItem(`topics_${currentStudent.email}_${unitId}`) || '[]');
     
     if (topics.length === 0) {
         container.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No topics added yet. Create your first topic above!</p>';
@@ -248,24 +315,24 @@ function addNote(topicId) {
         return;
     }
     
-    const topics = JSON.parse(localStorage.getItem(`topics_${currentUnit.id}`) || '[]');
+    const topics = JSON.parse(localStorage.getItem(`topics_${currentStudent.email}_${currentUnit.id}`) || '[]');
     const topic = topics.find(t => t.id === topicId);
     
     if (topic) {
         topic.notes.push(noteText);
-        localStorage.setItem(`topics_${currentUnit.id}`, JSON.stringify(topics));
+        localStorage.setItem(`topics_${currentStudent.email}_${currentUnit.id}`, JSON.stringify(topics));
         displayTopics(currentUnit.id);
     }
 }
 
 // Delete note
 function deleteNote(topicId, noteIndex) {
-    const topics = JSON.parse(localStorage.getItem(`topics_${currentUnit.id}`) || '[]');
+    const topics = JSON.parse(localStorage.getItem(`topics_${currentStudent.email}_${currentUnit.id}`) || '[]');
     const topic = topics.find(t => t.id === topicId);
     
     if (topic) {
         topic.notes.splice(noteIndex, 1);
-        localStorage.setItem(`topics_${currentUnit.id}`, JSON.stringify(topics));
+        localStorage.setItem(`topics_${currentStudent.email}_${currentUnit.id}`, JSON.stringify(topics));
         displayTopics(currentUnit.id);
     }
 }
@@ -274,9 +341,9 @@ function deleteNote(topicId, noteIndex) {
 function deleteTopic(topicId) {
     if (!confirm('Delete this topic and all its notes?')) return;
     
-    const topics = JSON.parse(localStorage.getItem(`topics_${currentUnit.id}`) || '[]');
+    const topics = JSON.parse(localStorage.getItem(`topics_${currentStudent.email}_${currentUnit.id}`) || '[]');
     const filtered = topics.filter(t => t.id !== topicId);
-    localStorage.setItem(`topics_${currentUnit.id}`, JSON.stringify(filtered));
+    localStorage.setItem(`topics_${currentStudent.email}_${currentUnit.id}`, JSON.stringify(filtered));
     displayTopics(currentUnit.id);
 }
 
@@ -293,7 +360,7 @@ function uploadLectureNotes() {
     const savedNotes = JSON.parse(localStorage.getItem(`lectureNotes_${currentUnit.id}`) || '[]');
     
     for (let file of files) {
-        savedNotes.push({ name: file.name, date: new Date().toLocaleString() });
+        savedNotes.push({ name: file.name, date: new Date().toLocaleString(), uploadedBy: currentStudent.name });
     }
     
     localStorage.setItem(`lectureNotes_${currentUnit.id}`, JSON.stringify(savedNotes));
@@ -305,20 +372,36 @@ function uploadLectureNotes() {
 // Display lecture notes
 function displayLectureNotes(unitId) {
     const notesList = document.getElementById('lectureNotesList');
+    const sharedList = document.getElementById('sharedLectureNotesList');
     const savedNotes = JSON.parse(localStorage.getItem(`lectureNotes_${unitId}`) || '[]');
     
     if (savedNotes.length === 0) {
         notesList.innerHTML = '<p style="color: #666;">No lecture notes uploaded yet.</p>';
+        sharedList.innerHTML = '<p style="color: #666;">No shared notes available.</p>';
         return;
     }
     
-    notesList.innerHTML = savedNotes.map((file, index) => `
+    const myNotes = savedNotes.filter(f => f.uploadedBy === currentStudent.name);
+    const sharedNotes = savedNotes.filter(f => f.uploadedBy !== currentStudent.name);
+    
+    notesList.innerHTML = myNotes.length === 0 ? '<p style="color: #666;">You haven\'t uploaded any notes yet.</p>' : 
+        myNotes.map((file, index) => `
         <div class="file-item">
             <div>
                 <span>📄 ${file.name}</span>
                 <p class="file-date">📅 ${file.date}</p>
             </div>
-            <button onclick="deleteLectureNote(${unitId}, ${index})">Delete</button>
+            <button onclick="deleteLectureNote(${unitId}, ${savedNotes.indexOf(file)})">Delete</button>
+        </div>
+    `).join('');
+    
+    sharedList.innerHTML = sharedNotes.length === 0 ? '<p style="color: #666;">No shared notes from other students.</p>' :
+        sharedNotes.map((file) => `
+        <div class="file-item">
+            <div>
+                <span>📄 ${file.name}</span>
+                <p class="file-date">📅 ${file.date} • Shared by: ${file.uploadedBy}</p>
+            </div>
         </div>
     `).join('');
 }
@@ -326,12 +409,14 @@ function displayLectureNotes(unitId) {
 // Delete lecture note
 function deleteLectureNote(unitId, index) {
     const savedNotes = JSON.parse(localStorage.getItem(`lectureNotes_${unitId}`) || '[]');
-    savedNotes.splice(index, 1);
+    const myNotes = savedNotes.filter(f => f.uploadedBy === currentStudent.name);
+    const myNoteIndex = savedNotes.indexOf(myNotes[index]);
+    savedNotes.splice(myNoteIndex, 1);
     localStorage.setItem(`lectureNotes_${unitId}`, JSON.stringify(savedNotes));
     displayLectureNotes(unitId);
 }
 
-// Upload files
+// Upload files (private to student)
 function uploadFiles() {
     const fileInput = document.getElementById('fileUpload');
     const files = fileInput.files;
@@ -341,22 +426,22 @@ function uploadFiles() {
         return;
     }
     
-    const savedFiles = JSON.parse(localStorage.getItem(`files_${currentUnit.id}`) || '[]');
+    const savedFiles = JSON.parse(localStorage.getItem(`files_${currentStudent.email}_${currentUnit.id}`) || '[]');
     
     for (let file of files) {
         savedFiles.push({ name: file.name, date: new Date().toLocaleString() });
     }
     
-    localStorage.setItem(`files_${currentUnit.id}`, JSON.stringify(savedFiles));
+    localStorage.setItem(`files_${currentStudent.email}_${currentUnit.id}`, JSON.stringify(savedFiles));
     displayFiles(currentUnit.id);
     fileInput.value = '';
     alert('Files uploaded successfully!');
 }
 
-// Display uploaded files
+// Display uploaded files (private to student)
 function displayFiles(unitId) {
     const filesList = document.getElementById('filesList');
-    const savedFiles = JSON.parse(localStorage.getItem(`files_${unitId}`) || '[]');
+    const savedFiles = JSON.parse(localStorage.getItem(`files_${currentStudent.email}_${unitId}`) || '[]');
     
     if (savedFiles.length === 0) {
         filesList.innerHTML = '<p style="color: #666;">No files uploaded yet.</p>';
@@ -374,11 +459,11 @@ function displayFiles(unitId) {
     `).join('');
 }
 
-// Delete file
+// Delete file (private)
 function deleteFile(unitId, index) {
-    const savedFiles = JSON.parse(localStorage.getItem(`files_${unitId}`) || '[]');
+    const savedFiles = JSON.parse(localStorage.getItem(`files_${currentStudent.email}_${unitId}`) || '[]');
     savedFiles.splice(index, 1);
-    localStorage.setItem(`files_${unitId}`, JSON.stringify(savedFiles));
+    localStorage.setItem(`files_${currentStudent.email}_${unitId}`, JSON.stringify(savedFiles));
     displayFiles(unitId);
 }
 
@@ -401,11 +486,13 @@ function updateCurrentPageUnits() {
 // Logout
 function logout() {
     if (confirm('Are you sure you want to logout?')) {
+        saveToStorage();
         currentStudent = null;
+        customUnits = [];
         selectedUnits = [];
         currentUnit = null;
-        localStorage.clear();
         document.getElementById('loginForm').reset();
+        document.getElementById('loginProfilePic').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23667eea'/%3E%3Cg transform='translate(30,20)'%3E%3Crect x='0' y='10' width='40' height='30' fill='%23f5deb3' stroke='%23333' stroke-width='1'/%3E%3Cpath d='M 5 15 Q 20 12 35 15' stroke='%23333' stroke-width='0.5' fill='none'/%3E%3Cpath d='M 5 22 Q 20 20 35 22' stroke='%23333' stroke-width='0.5' fill='none'/%3E%3Cpath d='M 5 29 Q 20 27 35 29' stroke='%23333' stroke-width='0.5' fill='none'/%3E%3Ccircle cx='20' cy='55' r='8' fill='%23fdbcb4'/%3E%3Ccircle cx='20' cy='55' r='5' fill='%23667eea'/%3E%3C/g%3E%3C/svg%3E";
         showPage('loginPage');
     }
 }
@@ -418,33 +505,19 @@ function showPage(pageId) {
 
 // Storage functions
 function saveToStorage() {
-    localStorage.setItem('currentStudent', JSON.stringify(currentStudent));
-    localStorage.setItem('selectedUnits', JSON.stringify(selectedUnits));
-    localStorage.setItem('customUnits', JSON.stringify(customUnits));
-    localStorage.setItem('nextUnitId', nextUnitId);
+    if (currentStudent) {
+        currentStudent.units = customUnits;
+        currentStudent.nextUnitId = nextUnitId;
+        currentStudent.profilePic = document.getElementById('loginProfilePic').src;
+        allStudents[currentStudent.email] = currentStudent;
+        localStorage.setItem('lastEmail', currentStudent.email);
+    }
+    localStorage.setItem('allStudents', JSON.stringify(allStudents));
 }
 
 function loadFromStorage() {
-    const student = localStorage.getItem('currentStudent');
-    const units = localStorage.getItem('selectedUnits');
-    const custom = localStorage.getItem('customUnits');
-    const unitId = localStorage.getItem('nextUnitId');
-    
-    if (student) {
-        currentStudent = JSON.parse(student);
-        document.getElementById('userName').textContent = currentStudent.name;
-        document.getElementById('userName2').textContent = currentStudent.name;
-    }
-    
-    if (units) {
-        selectedUnits = JSON.parse(units);
-    }
-    
-    if (custom) {
-        customUnits = JSON.parse(custom);
-    }
-    
-    if (unitId) {
-        nextUnitId = parseInt(unitId);
+    const students = localStorage.getItem('allStudents');
+    if (students) {
+        allStudents = JSON.parse(students);
     }
 }

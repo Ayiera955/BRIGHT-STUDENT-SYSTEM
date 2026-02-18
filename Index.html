@@ -15,6 +15,12 @@
                 <span class="logo-icon">🐾</span>
             </div>
             <form id="loginForm">
+                <div class="profile-pic-container">
+                    <label for="profilePicInput">
+                        <img id="loginProfilePic" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23667eea'/%3E%3Cg transform='translate(30,20)'%3E%3Crect x='0' y='10' width='40' height='30' fill='%23f5deb3' stroke='%23333' stroke-width='1'/%3E%3Cpath d='M 5 15 Q 20 12 35 15' stroke='%23333' stroke-width='0.5' fill='none'/%3E%3Cpath d='M 5 22 Q 20 20 35 22' stroke='%23333' stroke-width='0.5' fill='none'/%3E%3Cpath d='M 5 29 Q 20 27 35 29' stroke='%23333' stroke-width='0.5' fill='none'/%3E%3Ccircle cx='20' cy='55' r='8' fill='%23fdbcb4'/%3E%3Ccircle cx='20' cy='55' r='5' fill='%23667eea'/%3E%3C/g%3E%3C/svg%3E" alt="Profile">
+                    </label>
+                    <input type="file" id="profilePicInput" accept="image/*" onchange="previewProfilePic()">
+                </div>
                 <input type="text" id="studentName" placeholder="Student Name" required>
                 <input type="email" id="studentEmail" placeholder="Email" required>
                 <button type="submit">Login</button>
@@ -27,7 +33,13 @@
         <nav class="navbar">
             <div class="nav-brand">BrightStudent 🐾</div>
             <div class="nav-user">
-                <span id="userName"></span>
+                <div class="user-profile">
+                    <label for="dashboardProfilePicInput">
+                        <img id="dashboardProfilePic" src="" alt="Profile" class="profile-pic-small">
+                    </label>
+                    <input type="file" id="dashboardProfilePicInput" accept="image/*" onchange="changeDashboardProfilePic()" style="display:none;">
+                    <span id="userName"></span>
+                </div>
                 <button onclick="logout()">Logout</button>
             </div>
         </nav>
@@ -48,7 +60,13 @@
         <nav class="navbar">
             <div class="nav-brand">BrightStudent 🐾</div>
             <div class="nav-user">
-                <span id="userName2"></span>
+                <div class="user-profile">
+                    <label for="myUnitsProfilePicInput">
+                        <img id="myUnitsProfilePic" src="" alt="Profile" class="profile-pic-small">
+                    </label>
+                    <input type="file" id="myUnitsProfilePicInput" accept="image/*" onchange="changeMyUnitsProfilePic()" style="display:none;">
+                    <span id="userName2"></span>
+                </div>
                 <button onclick="logout()">Logout</button>
             </div>
         </nav>
@@ -122,9 +140,15 @@
             <h2 id="lectureNotesViewTitle"></h2>
             
             <div class="unit-section">
+                <h3>📤 Upload Your Notes</h3>
                 <input type="file" id="lectureNotesUpload" accept=".pdf,.doc,.docx,.txt,.ppt,.pptx" multiple>
                 <button onclick="uploadLectureNotes()">Upload</button>
                 <div id="lectureNotesList" class="files-list"></div>
+            </div>
+            
+            <div class="unit-section">
+                <h3>📥 Shared Notes from Other Students</h3>
+                <div id="sharedLectureNotesList" class="files-list"></div>
             </div>
         </div>
     </div>
