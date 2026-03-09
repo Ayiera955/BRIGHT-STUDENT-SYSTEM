@@ -7,27 +7,13 @@ let currentUnit = null;
 let allStudents = {};
 
 document.addEventListener('DOMContentLoaded', () => {
-  loadFromStorage();
-  const lastEmail = localStorage.getItem('lastEmail');
-  const lastPage = localStorage.getItem('lastPage');
-  if (lastEmail && allStudents[lastEmail]) {
-    currentStudent = allStudents[lastEmail];
-    customUnits = currentStudent.units || [];
-    nextUnitId = currentStudent.nextUnitId || 1;
-    selectedUnits = customUnits.map(u => u.id);
+  const currentUser = localStorage.getItem('currentUser');
+  if (currentUser) {
+    currentStudent = JSON.parse(currentUser);
     document.getElementById('userName').textContent = currentStudent.name;
     document.getElementById('userName2').textContent = currentStudent.name;
-    document.getElementById('dashboardProfilePic').src = currentStudent.profilePic;
-    document.getElementById('myUnitsProfilePic').src = currentStudent.profilePic;
-    showPage(lastPage || 'myUnitsPage');
-    if (lastPage === 'myUnitsPage') displayMyUnits();
-    else if (lastPage === 'unitPage') {
-      const lastUnitId = localStorage.getItem('lastUnitId');
-      if (lastUnitId) {
-        currentUnit = customUnits.find(u => u.id == lastUnitId);
-        if (currentUnit) document.getElementById('unitTitle').textContent = currentUnit.name;
-      }
-    }
+    showPage('myUnitsPage');
+    displayMyUnits();
   } else {
     showPage('loginPage');
   }
@@ -38,18 +24,14 @@ document.addEventListener('DOMContentLoaded', () => {
 // ===== STORAGE =====
 function saveToStorage() {
   if (currentStudent) {
-    currentStudent.units = customUnits;
-    currentStudent.nextUnitId = nextUnitId;
-    allStudents[currentStudent.email] = currentStudent;
-    localStorage.setItem('lastEmail', currentStudent.email);
+    localStorage.setItem('currentUser', JSON.stringify(currentStudent));
   }
-  localStorage.setItem('allStudents', JSON.stringify(allStudents));
 }
 
 function loadFromStorage() {
-  const students = localStorage.getItem('allStudents');
-  if (students) {
-    allStudents = JSON.parse(students);
+  const user = localStorage.getItem('currentUser');
+  if (user) {
+    currentStudent = JSON.parse(user);
   }
 }
 
@@ -150,7 +132,7 @@ function displayUnits() {
   `).join('');
 }
 
-function addCustomUnit() {
+async function addCustomUnit() {
   const currentPage = document.querySelector('.page.active');
   let inputField;
   if (currentPage.id === 'dashboardPage') {
@@ -163,23 +145,30 @@ function addCustomUnit() {
     alert('Please enter a unit name!');
     return;
   }
-  if (selectedUnits.length >= 6) {
-    alert('You can only have up to 6 units!');
-    return;
+  
+  try {
+    const response = await fetch('api/add_unit.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: currentStudent.id,
+        name: name,
+        year: currentStudent.year || 1,
+        semester: currentStudent.semester || 1
+      })
+    });
+    
+    const result = await response.json();
+    if (result.success) {
+      inputField.value = '';
+      displayMyUnits();
+      alert('Unit added successfully!');
+    } else {
+      alert('Error: ' + result.error);
+    }
+  } catch (error) {
+    alert('Failed to add unit: ' + error.message);
   }
-  const newUnit = { id: nextUnitId++, name, semester: currentStudent.semester, year: currentStudent.year };
-  customUnits.push(newUnit);
-  selectedUnits.push(newUnit.id);
-  inputField.value = '';
-  saveToStorage();
-  if (currentPage.id === 'dashboardPage') {
-    displayUnits();
-  } else if (currentPage.id === 'myUnitsPage') {
-    displayMyUnits();
-  }
-  currentUnit = newUnit;
-  document.getElementById('unitTitle').textContent = currentUnit.name;
-  showPage('unitPage');
 }
 
 function toggleUnit(unitId) {
@@ -207,55 +196,46 @@ function confirmUnits() {
   displayMyUnits();
 }
 
-function displayMyUnits() {
+async function displayMyUnits() {
   const grid = document.getElementById('myUnitsGrid');
-  const filterValue = document.getElementById('semesterFilter')?.value || 'current';
-  let myUnits = customUnits.filter(u => selectedUnits.includes(u.id));
-  if (filterValue === 'current') {
-    myUnits = myUnits.filter(u => u.semester === currentStudent.semester && u.year === currentStudent.year);
-  }
-  document.getElementById('currentSemesterDisplay').textContent = `Y${currentStudent.year}S${currentStudent.semester}`;
+  if (!currentStudent) return;
   
-  let maxUnresolved = 0;
-  let maxUnitId = null;
-  myUnits.forEach(unit => {
-    const topics = JSON.parse(localStorage.getItem(`topics_${currentStudent.email}_${unit.id}`) || '[]');
-    const unresolvedCount = topics.filter(t => (t.status || 'unresolved') === 'unresolved').length;
-    if (unresolvedCount > maxUnresolved) {
-      maxUnresolved = unresolvedCount;
-      maxUnitId = unit.id;
-    }
-  });
-  
-  grid.innerHTML = myUnits.map(unit => {
-    const topics = JSON.parse(localStorage.getItem(`topics_${currentStudent.email}_${unit.id}`) || '[]');
-    const unresolvedCount = topics.filter(t => (t.status || 'unresolved') === 'unresolved').length;
-    const masteredCount = topics.filter(t => t.status === 'mastered').length;
-    const totalCount = topics.length;
-    const progressPercent = totalCount === 0 ? 0 : Math.round((masteredCount / totalCount) * 100);
-    const isHighest = maxUnresolved > 0 && unit.id === maxUnitId;
-    return `
-      <div class="unit-card" onclick="openUnit(${unit.id})" style="${isHighest ? 'border: 3px solid #ff6b6b; background: #fff5f5; box-shadow: 0 0 15px rgba(255, 107, 107, 0.3);' : ''}">
-        <h3>${unit.name}</h3>
-        <p style="font-size: 0.85rem; color: #999;">Y${unit.year}S${unit.semester}</p>
-        <div style="margin: 12px 0; background: #e0e0e0; border-radius: 10px; height: 8px; overflow: hidden;">
-          <div style="background: linear-gradient(90deg, #6bcf7f, #4caf50); height: 100%; width: ${progressPercent}%; transition: width 0.3s ease;"></div>
+  try {
+    const response = await fetch(`api/get_units.php?user_id=${currentStudent.id}&year=${currentStudent.year || 1}&semester=${currentStudent.semester || 1}`);
+    const result = await response.json();
+    
+    if (result.success) {
+      const units = result.units;
+      document.getElementById('currentSemesterDisplay').textContent = `Y${currentStudent.year}S${currentStudent.semester}`;
+      
+      if (units.length === 0) {
+        grid.innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">No units yet. Create your first unit above!</p>';
+        return;
+      }
+      
+      grid.innerHTML = units.map(unit => `
+        <div class="unit-card" onclick="openUnit(${unit.id})">
+          <h3>${unit.name}</h3>
+          <p style="font-size: 0.85rem; color: #999;">Y${unit.year}S${unit.semester}</p>
+          <div style="margin: 12px 0; background: #e0e0e0; border-radius: 10px; height: 8px; overflow: hidden;">
+            <div style="background: linear-gradient(90deg, #6bcf7f, #4caf50); height: 100%; width: ${unit.progress_percentage}%; transition: width 0.3s ease;"></div>
+          </div>
+          <p style="font-size: 0.8rem; color: #666; margin: 6px 0; font-weight: 600;">${unit.progress_percentage}% Mastered</p>
         </div>
-        <p style="font-size: 0.8rem; color: #666; margin: 6px 0; font-weight: 600;">${progressPercent}% Mastered</p>
-        ${unresolvedCount > 0 ? `<p style="font-size: 0.8rem; color: #ff6b6b; font-weight: 600;">⚠️ ${unresolvedCount} unresolved</p>` : ''}
-        ${isHighest ? `<p style="font-size: 0.75rem; color: #ff6b6b; font-weight: 700; margin-top: 4px;">🎯 FOCUS HERE</p>` : ''}
-      </div>
-    `;
-  }).join('');
+      `).join('');
+    }
+  } catch (error) {
+    console.error('Error loading units:', error);
+  }
 }
 
 
 
 function openUnit(unitId) {
-  currentUnit = customUnits.find(u => u.id === unitId);
-  document.getElementById('unitTitle').textContent = currentUnit.name;
+  currentUnit = { id: unitId };
   localStorage.setItem('lastUnitId', unitId);
   showPage('unitPage');
+  displayTopics(unitId);
 }
 
 // ===== NOTES MANAGEMENT =====
@@ -265,104 +245,182 @@ function openNotesView() {
   showPage('notesViewPage');
 }
 
-function addTopic() {
+async function addTopic() {
   const label = document.getElementById('topicLabel').value.trim();
   const name = document.getElementById('topicName').value.trim();
   if (!label || !name) {
     alert('Please enter both label and topic name!');
     return;
   }
-  const topics = JSON.parse(localStorage.getItem(`topics_${currentStudent.email}_${currentUnit.id}`) || '[]');
-  topics.push({ id: Date.now(), label, name, notes: [], createdDate: new Date().toLocaleString(), status: 'unresolved' });
-  localStorage.setItem(`topics_${currentStudent.email}_${currentUnit.id}`, JSON.stringify(topics));
-  document.getElementById('topicLabel').value = '';
-  document.getElementById('topicName').value = '';
-  displayTopics(currentUnit.id);
+  
+  try {
+    const response = await fetch('api/add_topic.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        unit_id: currentUnit.id,
+        label: label,
+        name: name
+      })
+    });
+    
+    const result = await response.json();
+    if (result.success) {
+      document.getElementById('topicLabel').value = '';
+      document.getElementById('topicName').value = '';
+      displayTopics(currentUnit.id);
+    } else {
+      alert('Error: ' + result.error);
+    }
+  } catch (error) {
+    alert('Failed to add topic: ' + error.message);
+  }
 }
 
-function displayTopics(unitId) {
+async function displayTopics(unitId) {
   const container = document.getElementById('topicsContainer');
-  const topics = JSON.parse(localStorage.getItem(`topics_${currentStudent.email}_${unitId}`) || '[]');
-  if (topics.length === 0) {
-    container.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No topics added yet. Create your first topic above!</p>';
-    return;
-  }
-  const statusColors = { unresolved: '#ff6b6b', 'in-progress': '#ffd93d', mastered: '#6bcf7f' };
-  container.innerHTML = topics.map(topic => `
-    <div class="topic-card">
-      <div class="topic-header">
-        <div>
-          <span class="topic-label">${topic.label}</span>
-          <h4 class="topic-name">${topic.name}</h4>
-          <p class="topic-date">📅 Created: ${topic.createdDate || 'N/A'}</p>
-        </div>
-        <div style="display: flex; gap: 10px; align-items: center;">
-          <select onchange="updateTopicStatus(${topic.id}, this.value)" style="padding: 8px 12px; border: 2px solid ${statusColors[topic.status || 'unresolved']}; border-radius: 8px; background: white; cursor: pointer; font-weight: 600; color: ${statusColors[topic.status || 'unresolved']};">
-            <option value="unresolved" ${(topic.status || 'unresolved') === 'unresolved' ? 'selected' : ''}>🔴 Unresolved</option>
-            <option value="in-progress" ${(topic.status || 'unresolved') === 'in-progress' ? 'selected' : ''}>🟡 In Progress</option>
-            <option value="mastered" ${(topic.status || 'unresolved') === 'mastered' ? 'selected' : ''}>🟢 Mastered</option>
-          </select>
-          <button class="delete-btn" onclick="deleteTopic(${topic.id})">×</button>
-        </div>
-      </div>
-      <div class="notes-list">
-        ${topic.notes.map((note, idx) => `
-          <div class="note-item">
-            <span>${note}</span>
-            <button onclick="deleteNote(${topic.id}, ${idx})">×</button>
+  
+  try {
+    const response = await fetch(`api/get_topics.php?unit_id=${unitId}`);
+    const result = await response.json();
+    
+    if (result.success) {
+      const topics = result.topics;
+      if (topics.length === 0) {
+        container.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No topics added yet. Create your first topic above!</p>';
+        return;
+      }
+      
+      const statusColors = { Unresolved: '#ff6b6b', 'In Progress': '#ffd93d', Mastered: '#6bcf7f' };
+      container.innerHTML = topics.map(topic => `
+        <div class="topic-card">
+          <div class="topic-header">
+            <div>
+              <span class="topic-label">${topic.label}</span>
+              <h4 class="topic-name">${topic.name}</h4>
+              <p class="topic-date">📅 Created: ${new Date(topic.created_at).toLocaleString()}</p>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <select onchange="updateTopicStatus(${topic.id}, this.value)" style="padding: 8px 12px; border: 2px solid ${statusColors[topic.status]}; border-radius: 8px; background: white; cursor: pointer; font-weight: 600; color: ${statusColors[topic.status]};">
+                <option value="Unresolved" ${topic.status === 'Unresolved' ? 'selected' : ''}>🔴 Unresolved</option>
+                <option value="In Progress" ${topic.status === 'In Progress' ? 'selected' : ''}>🟡 In Progress</option>
+                <option value="Mastered" ${topic.status === 'Mastered' ? 'selected' : ''}>🟢 Mastered</option>
+              </select>
+              <button class="delete-btn" onclick="deleteTopic(${topic.id})">×</button>
+            </div>
           </div>
-        `).join('')}
-      </div>
-      <div class="add-note-form">
-        <input type="text" id="note_${topic.id}" placeholder="Add a note or question...">
-        <button onclick="addNote(${topic.id})">Add</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-function updateTopicStatus(topicId, newStatus) {
-  const topics = JSON.parse(localStorage.getItem(`topics_${currentStudent.email}_${currentUnit.id}`) || '[]');
-  const topic = topics.find(t => t.id === topicId);
-  if (topic) {
-    topic.status = newStatus;
-    localStorage.setItem(`topics_${currentStudent.email}_${currentUnit.id}`, JSON.stringify(topics));
-    displayTopics(currentUnit.id);
+          <div class="notes-list" id="notes_${topic.id}"></div>
+          <div class="add-note-form">
+            <input type="text" id="note_${topic.id}" placeholder="Add a note or question...">
+            <button onclick="addNote(${topic.id})">Add</button>
+          </div>
+        </div>
+      `).join('');
+      
+      topics.forEach(topic => displayNotes(topic.id));
+    }
+  } catch (error) {
+    console.error('Error loading topics:', error);
   }
 }
 
-function addNote(topicId) {
+async function displayNotes(topicId) {
+  const container = document.getElementById(`notes_${topicId}`);
+  
+  try {
+    const response = await fetch(`api/get_notes.php?topic_id=${topicId}`);
+    const result = await response.json();
+    
+    if (result.success) {
+      const notes = result.notes;
+      container.innerHTML = notes.map((note, idx) => `
+        <div class="note-item">
+          <span>${note.content}</span>
+          <button onclick="deleteNote(${note.id})">×</button>
+        </div>
+      `).join('');
+    }
+  } catch (error) {
+    console.error('Error loading notes:', error);
+  }
+}
+
+async function updateTopicStatus(topicId, newStatus) {
+  // Topic status update would be implemented here
+  console.log('Update topic status:', topicId, newStatus);
+}
+
+async function addNote(topicId) {
   const input = document.getElementById(`note_${topicId}`);
   const noteText = input.value.trim();
   if (!noteText) {
     alert('Please enter a note!');
     return;
   }
-  const topics = JSON.parse(localStorage.getItem(`topics_${currentStudent.email}_${currentUnit.id}`) || '[]');
-  const topic = topics.find(t => t.id === topicId);
-  if (topic) {
-    topic.notes.push(noteText);
-    localStorage.setItem(`topics_${currentStudent.email}_${currentUnit.id}`, JSON.stringify(topics));
-    displayTopics(currentUnit.id);
+  
+  try {
+    const response = await fetch('api/add_note.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        topic_id: topicId,
+        content: noteText,
+        status: 'Unresolved'
+      })
+    });
+    
+    const result = await response.json();
+    if (result.success) {
+      input.value = '';
+      displayNotes(topicId);
+    } else {
+      alert('Error: ' + result.error);
+    }
+  } catch (error) {
+    alert('Failed to add note: ' + error.message);
   }
 }
 
-function deleteNote(topicId, noteIndex) {
-  const topics = JSON.parse(localStorage.getItem(`topics_${currentStudent.email}_${currentUnit.id}`) || '[]');
-  const topic = topics.find(t => t.id === topicId);
-  if (topic) {
-    topic.notes.splice(noteIndex, 1);
-    localStorage.setItem(`topics_${currentStudent.email}_${currentUnit.id}`, JSON.stringify(topics));
-    displayTopics(currentUnit.id);
+async function deleteNote(noteId) {
+  if (!confirm('Delete this note?')) return;
+  
+  try {
+    const response = await fetch('api/delete_note.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note_id: noteId })
+    });
+    
+    const result = await response.json();
+    if (result.success) {
+      displayTopics(currentUnit.id);
+    } else {
+      alert('Error: ' + result.error);
+    }
+  } catch (error) {
+    alert('Failed to delete note: ' + error.message);
   }
 }
 
-function deleteTopic(topicId) {
+async function deleteTopic(topicId) {
   if (!confirm('Delete this topic and all its notes?')) return;
-  const topics = JSON.parse(localStorage.getItem(`topics_${currentStudent.email}_${currentUnit.id}`) || '[]');
-  const filtered = topics.filter(t => t.id !== topicId);
-  localStorage.setItem(`topics_${currentStudent.email}_${currentUnit.id}`, JSON.stringify(filtered));
-  displayTopics(currentUnit.id);
+  
+  try {
+    const response = await fetch('api/delete_topic.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic_id: topicId })
+    });
+    
+    const result = await response.json();
+    if (result.success) {
+      displayTopics(currentUnit.id);
+    } else {
+      alert('Error: ' + result.error);
+    }
+  } catch (error) {
+    alert('Failed to delete topic: ' + error.message);
+  }
 }
 
 // ===== LECTURE NOTES =====
@@ -600,12 +658,8 @@ function updateCurrentPageUnits() {
 
 function logout() {
   if (confirm('Are you sure you want to logout?')) {
-    saveToStorage();
     currentStudent = null;
-    customUnits = [];
-    selectedUnits = [];
-    currentUnit = null;
-    localStorage.removeItem('lastEmail');
+    localStorage.removeItem('currentUser');
     localStorage.removeItem('lastPage');
     localStorage.removeItem('lastUnitId');
     document.getElementById('loginForm').reset();

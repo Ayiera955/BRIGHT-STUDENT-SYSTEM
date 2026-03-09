@@ -1,28 +1,23 @@
-# OS Files
+# API Configuration
+api/config.php
+
+# Test files
+api/test.php
+api/dbtest.php
+
+# OS files
 .DS_Store
 Thumbs.db
-*.swp
-*.swo
-*~
 
 # IDE
 .vscode/
 .idea/
-*.sublime-project
-*.sublime-workspace
+*.swp
+*.swo
 
-# Node (if using any build tools in future)
+# Node modules (if added later)
 node_modules/
-npm-debug.log
-yarn-error.log
 
 # Environment
 .env
 .env.local
-
-# Logs
-*.log
-
-# Temporary files
-*.tmp
-*.temp

@@ -15,64 +15,79 @@ function previewSignupProfilePic() {
   }
 }
 
-function handleLogin(e) {
+async function handleLogin(e) {
   e.preventDefault();
   const email = document.getElementById('loginEmail').value;
   const password = document.getElementById('loginPassword').value;
-  if (!allStudents[email]) {
-    alert('Account not found. Please sign up first.');
-    return;
-  }
-  if (allStudents[email].password !== password) {
-    alert('Incorrect password.');
-    return;
-  }
-  currentStudent = allStudents[email];
-  customUnits = currentStudent.units || [];
-  nextUnitId = currentStudent.nextUnitId || 1;
-  selectedUnits = customUnits.map(u => u.id);
-  document.getElementById('userName').textContent = currentStudent.name;
-  document.getElementById('userName2').textContent = currentStudent.name;
-  document.getElementById('dashboardProfilePic').src = currentStudent.profilePic;
-  document.getElementById('myUnitsProfilePic').src = currentStudent.profilePic;
-  localStorage.setItem('lastEmail', email);
-  saveToStorage();
-  if (selectedUnits.length === 0) {
-    showPage('dashboardPage');
-    displayUnits();
-  } else {
-    showPage('myUnitsPage');
-    displayMyUnits();
+  
+  try {
+    const response = await fetch('api/login.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      alert('Error: ' + (error.error || 'Login failed'));
+      return;
+    }
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      currentStudent = result.user;
+      localStorage.setItem('currentUser', JSON.stringify(result.user));
+      document.getElementById('userName').textContent = result.user.name;
+      document.getElementById('userName2').textContent = result.user.name;
+      localStorage.setItem('lastEmail', email);
+      showPage('myUnitsPage');
+      displayMyUnits();
+    } else {
+      alert('Error: ' + result.error);
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    alert('Login failed: ' + error.message);
   }
 }
 
-function handleSignup(e) {
+async function handleSignup(e) {
   e.preventDefault();
   const name = document.getElementById('signupName').value;
   const email = document.getElementById('signupEmail').value;
   const password = document.getElementById('signupPassword').value;
   const passwordConfirm = document.getElementById('signupPasswordConfirm').value;
-  const profilePic = document.getElementById('signupProfilePic').src;
+  
   if (password !== passwordConfirm) {
     alert('Passwords do not match.');
     return;
   }
-  if (allStudents[email]) {
-    alert('Account already exists with this email.');
-    return;
+  
+  try {
+    const response = await fetch('api/signup.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      alert('Error: ' + (error.error || 'Signup failed'));
+      return;
+    }
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      alert('Account created successfully! Please login.');
+      document.getElementById('signupForm').reset();
+      toggleSignup();
+    } else {
+      alert('Error: ' + result.error);
+    }
+  } catch (error) {
+    console.error('Signup error:', error);
+    alert('Signup failed: ' + error.message);
   }
-  allStudents[email] = { name, email, password, units: [], nextUnitId: 1, profilePic, year: '1', semester: '1', archivedSemesters: [] };
-  currentStudent = allStudents[email];
-  customUnits = [];
-  nextUnitId = 1;
-  selectedUnits = [];
-  document.getElementById('userName').textContent = name;
-  document.getElementById('userName2').textContent = name;
-  document.getElementById('dashboardProfilePic').src = profilePic;
-  document.getElementById('myUnitsProfilePic').src = profilePic;
-  localStorage.setItem('lastEmail', email);
-  saveToStorage();
-  document.getElementById('signupForm').reset();
-  showPage('dashboardPage');
-  displayUnits();
 }
