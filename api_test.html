@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        .test { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>🧪 API Test Page</h1>
+    
+    <div class="test">
+        <h3>Test 1: Database Connection</h3>
+        <button onclick="testConnection()">Test Connection</button>
+        <pre id="connectionResult"></pre>
+    </div>
+    
+    <div class="test">
+        <h3>Test 2: Signup</h3>
+        <input type="text" id="signupName" placeholder="Name" value="Test User">
+        <input type="email" id="signupEmail" placeholder="Email" value="test@example.com">
+        <input type="password" id="signupPassword" placeholder="Password" value="password123">
+        <button onclick="testSignup()">Test Signup</button>
+        <pre id="signupResult"></pre>
+    </div>
+    
+    <div class="test">
+        <h3>Test 3: Login</h3>
+        <input type="email" id="loginEmail" placeholder="Email" value="test@example.com">
+        <input type="password" id="loginPassword" placeholder="Password" value="password123">
+        <button onclick="testLogin()">Test Login</button>
+        <pre id="loginResult"></pre>
+    </div>
+
+    <script>
+        async function testConnection() {
+            const result = document.getElementById('connectionResult');
+            try {
+                const response = await fetch('api/debug_connection.php');
+                const data = await response.json();
+                result.textContent = JSON.stringify(data, null, 2);
+                result.className = data.success ? 'success' : 'error';
+            } catch (error) {
+                result.textContent = 'Error: ' + error.message;
+                result.className = 'error';
+            }
+        }
+
+        async function testSignup() {
+            const result = document.getElementById('signupResult');
+            const name = document.getElementById('signupName').value;
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            
+            try {
+                const response = await fetch('api/signup.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password })
+                });
+                const data = await response.json();
+                result.textContent = JSON.stringify(data, null, 2);
+                result.className = data.success ? 'success' : 'error';
+            } catch (error) {
+                result.textContent = 'Error: ' + error.message;
+                result.className = 'error';
+            }
+        }
+
+        async function testLogin() {
+            const result = document.getElementById('loginResult');
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            try {
+                const response = await fetch('api/login.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await response.json();
+                result.textContent = JSON.stringify(data, null, 2);
+                result.className = data.success ? 'success' : 'error';
+            } catch (error) {
+                result.textContent = 'Error: ' + error.message;
+                result.className = 'error';
+            }
+        }
+    </script>
+</body>
+</html>
