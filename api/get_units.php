@@ -10,16 +10,22 @@ if ($user_id == 0) {
     exit;
 }
 
-$sql = "SELECT u.id, u.name, u.progress_percentage, s.year, s.semester 
-        FROM units u 
-        JOIN semesters s ON u.semester_id = s.id 
-        WHERE s.user_id = $user_id AND s.is_archived = 0";
-
 if ($year > 0 && $semester > 0) {
-    $sql .= " AND s.year = $year AND s.semester = $semester";
+    $stmt = $conn->prepare("SELECT u.id, u.name, u.progress_percentage, s.year, s.semester 
+            FROM units u 
+            JOIN semesters s ON u.semester_id = s.id 
+            WHERE s.user_id = ? AND s.is_archived = 0 AND s.year = ? AND s.semester = ?");
+    $stmt->bind_param("iii", $user_id, $year, $semester);
+} else {
+    $stmt = $conn->prepare("SELECT u.id, u.name, u.progress_percentage, s.year, s.semester 
+            FROM units u 
+            JOIN semesters s ON u.semester_id = s.id 
+            WHERE s.user_id = ? AND s.is_archived = 0");
+    $stmt->bind_param("i", $user_id);
 }
 
-$result = $conn->query($sql);
+$stmt->execute();
+$result = $stmt->get_result();
 $units = [];
 
 if ($result->num_rows > 0) {
@@ -29,4 +35,5 @@ if ($result->num_rows > 0) {
 }
 
 echo json_encode(['success' => true, 'units' => $units]);
+$stmt->close();
 ?>

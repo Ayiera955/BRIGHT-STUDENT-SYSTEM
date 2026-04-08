@@ -37,7 +37,9 @@ async function handleLogin(e) {
     
     if (result.success) {
       currentStudent = result.user;
-      localStorage.setItem('currentUser', JSON.stringify(result.user));
+      currentStudent.year = result.user.year || 1;
+      currentStudent.semester = result.user.semester || 1;
+      localStorage.setItem('currentUser', JSON.stringify(currentStudent));
       document.getElementById('userName').textContent = result.user.name;
       document.getElementById('userName2').textContent = result.user.name;
       localStorage.setItem('lastEmail', email);
